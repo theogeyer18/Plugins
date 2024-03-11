@@ -1,0 +1,725 @@
+-- HTTPClient Example Plugin
+-- by QSC
+-- October 2020
+
+PluginInfo = {
+  Name = "VITEC HTTP/S Restful API Plugin",
+  Version = "1.1",
+  BuildVersion = "0.0.1.18",
+  Id = "",
+  Author = "Theo Geyer",
+  Description = "A Vitec Plugin to get you started and allow commands to be added."
+}
+
+function GetColor(props)
+  return { 102, 102, 102 }
+end
+
+function GetPrettyName(props) --The name that will initially display when dragged into a design
+  return "VITEC Starter Plugin, ver. " .. PluginInfo.Version
+end
+
+function GetProperties()
+  local props = {}
+  table.insert(props, {
+    Name = "Debug Print",
+    Type = "enum",
+    Choices = {"None", "Tx/Rx", "Tx", "Rx", "Function Calls", "All"},
+    Value = "None"
+  })
+  return props
+end
+
+function RectifyProperties(props)
+  if props.plugin_show_debug.Value == false then 
+    props["Debug Print"].IsHidden = true 
+  end
+  return props
+end
+
+function GetControls(props)
+  local ctrls = {}
+  table.insert(ctrls, { 
+    Name = "IPAdd",
+    ControlType = "Text",
+    TextType = "Text Box",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input",
+    DefaultValue = "192.168.1.40"
+  })
+  table.insert(ctrls, { 
+    Name = "DevicePort",
+    ControlType = "Text",
+    TextType = "Text Box",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input",
+    DefaultValue = "80" 
+  })
+  table.insert(ctrls, { 
+    Name = "UserID",
+    ControlType = "Text",
+    TextType = "Text Box",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input",
+    DefaultValue = "admin"
+  })
+  table.insert(ctrls, { 
+    Name = "UserPassword",
+    ControlType = "Text",
+    TextType = "Text Box",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input",
+    DefaultValue = "labrador"
+  })
+  table.insert(ctrls, { 
+    Name = "EndpointID",
+    ControlType = "Text",
+    TextType = "Text Box",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input",
+    DefaultValue = "3"
+  })
+  table.insert(ctrls, { 
+    Name = "CommandName",
+    ControlType = "Text",
+    TextType = "Text Box",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input",
+    DefaultValue = "channel"
+  })
+  table.insert(ctrls, { 
+    Name = "KeyName1",
+    ControlType = "Text",
+    TextType = "Text Box",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input",
+    DefaultValue = "uri"
+  })
+  table.insert(ctrls, { 
+    Name = "KeyValue1",
+    ControlType = "Text",
+    TextType = "Text Box",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input",
+    DefaultValue = "udp://239.192.1.40:5000"
+  })
+  table.insert(ctrls, { 
+    Name = "KeyName2",
+    ControlType = "Text",
+    TextType = "Text Box",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input"
+  })
+  table.insert(ctrls, { 
+    Name = "KeyValue2",
+    ControlType = "Text",
+    TextType = "Text Box",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input"
+  })
+  table.insert(ctrls, { 
+    Name = "KeyName3",
+    ControlType = "Text",
+    TextType = "Text Box",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input"
+  })
+  table.insert(ctrls, { 
+    Name = "KeyValue3",
+    ControlType = "Text",
+    TextType = "Text Box",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input"
+  })
+  table.insert(ctrls, { 
+    Name = "KeyName4",
+    ControlType = "Text",
+    TextType = "Text Box",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input"
+  })
+  table.insert(ctrls, { 
+    Name = "KeyValue4",
+    ControlType = "Text",
+    TextType = "Text Box",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input"
+  })
+  
+  table.insert(ctrls, {
+    Name = "Status",
+    ControlType = "Indicator",
+    IndicatorType = "Status",
+    PinStyle = "Output",
+    UserPin = true,
+    Count = 1
+  })
+  table.insert(ctrls, {
+    Name = "SendGet",
+    ControlType = "Button",
+    ButtonType = "Momentary",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input"
+  })
+  table.insert(ctrls, {
+    Name = "SendPut",
+    ControlType = "Button",
+    ButtonType = "Momentary",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input"
+  })
+  table.insert(ctrls, {
+    Name = "SendPost",
+    ControlType = "Button",
+    ButtonType = "Momentary",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Input"
+  })
+  table.insert(ctrls, {
+    Name = "ResponseText",
+    ControlType = "Text",
+    Count = 1,
+    UserPin = true,
+    PinStyle = "Output"
+  })
+  return ctrls
+end
+
+function GetControlLayout(props)
+  local layout   = {}
+  local graphics = {}
+  -- Text display
+  
+  table.insert(graphics, {
+    Type = "Header",
+    Text = "Avedia Server API Client (Unofficial)",
+    Position = {5, 5},
+    Size = {350, 16},
+    FontSize = 14,
+    HTextAlign = "Center"
+  })
+  table.insert(graphics, {
+    Type = "Text",
+    Text = "Server IP",
+    Position = {2, 25},
+    Size = {65, 16},
+    FontSize = 10,
+    HTextAlign = "Right"
+  })
+  table.insert(graphics, {
+    Type = "Text",
+    Text = "Port",
+    Position = {180, 25},
+    Size = {55, 16},
+    FontSize = 10,
+    HTextAlign = "Right"
+  })
+  table.insert(graphics, {
+    Type = "Text",
+    Text = "Username",
+    Position = {2, 45},
+    Size = {70, 16},
+    FontSize = 10,
+    HTextAlign = "Right"
+  })
+  table.insert(graphics, {
+    Type = "Text",
+    Text = "Password",
+    Position = {165, 45},
+    Size = {70, 16},
+    FontSize = 10,
+    HTextAlign = "Right"
+  })
+  table.insert(graphics, {
+    Type = "Text",
+    Text = "Endpoint ID/Mac",
+    Position = {2, 65},
+    Size = {85, 16},
+    FontSize = 10,
+    HTextAlign = "Right"
+  })
+  table.insert(graphics, {
+    Type = "Text",
+    Text = "Command",
+    Position = {185, 65},
+    Size = {60, 16},
+    FontSize = 10,
+    HTextAlign = "Right"
+  })
+  table.insert(graphics, {
+    Type = "Text",
+    Text = "Key Name 1",
+    Position = {2, 85},
+    Size = {70, 16},
+    FontSize = 10,
+    HTextAlign = "Right"
+  })
+  table.insert(graphics, {
+    Type = "Text",
+    Text = "Key Value 1",
+    Position = {165, 85},
+    Size = {70, 16},
+    FontSize = 10,
+    HTextAlign = "Right"
+  })
+  table.insert(graphics, {
+    Type = "Text",
+    Text = "Key Name 2",
+    Position = {2, 105},
+    Size = {70, 16},
+    FontSize = 10,
+    HTextAlign = "Right"
+  })
+  table.insert(graphics, {
+    Type = "Text",
+    Text = "Key Value 2",
+    Position = {165, 105},
+    Size = {70, 16},
+    FontSize = 10,
+    HTextAlign = "Right"
+  })
+  table.insert(graphics, {
+    Type = "Text",
+    Text = "Key Name 3",
+    Position = {2, 125},
+    Size = {70, 16},
+    FontSize = 10,
+    HTextAlign = "Right"
+  })
+  table.insert(graphics, {
+    Type = "Text",
+    Text = "Key Value 3",
+    Position = {165, 125},
+    Size = {70, 16},
+    FontSize = 10,
+    HTextAlign = "Right"
+  })
+  table.insert(graphics, {
+    Type = "Text",
+    Text = "Key Name 4",
+    Position = {2, 145},
+    Size = {70, 16},
+    FontSize = 10,
+    HTextAlign = "Right"
+  })
+  table.insert(graphics, {
+    Type = "Text",
+    Text = "Key Value 4",
+    Position = {165, 145},
+    Size = {70, 16},
+    FontSize = 10,
+    HTextAlign = "Right"
+  })
+  
+  table.insert(graphics, {
+    Type = "Text",
+    Text = "Send GET",
+    Position = {5, 165},
+    Size = {95, 16},
+    FontSize = 14,
+    HTextAlign = "Right"
+  })
+  table.insert(graphics, {
+    Type = "Text",
+    Text = "Send POST",
+    Position = {5, 185},
+    Size = {95, 16},
+    FontSize = 14,
+    HTextAlign = "Right"
+  })
+  table.insert(graphics, {
+    Type = "Text",
+    Text = "Send PUT",
+    Position = {5, 205},
+    Size = {95, 16},
+    FontSize = 14,
+    HTextAlign = "Right"
+  })
+  table.insert(graphics, {
+    Type = "Text",
+    Text = "Status",
+    Position = {5, 225},
+    Size = {95, 16},
+    FontSize = 14,
+    HTextAlign = "Right"
+  })
+  table.insert(graphics, {
+    Type = "Text",
+    Text = "Response",
+    Position = {5, 245},
+    Size = {95, 16},
+    FontSize = 14,
+    HTextAlign = "Right"
+  })
+  
+  --Controls
+  layout["IPAdd"] = {
+    PrettyName = "Add IP Address",
+    Position = {70, 25}, 
+    Size = {100, 16},
+    FontSize = 12,
+    Style = "Text",
+    HTextAlign = "Left"
+  }
+  layout["DevicePort"] = {
+    PrettyName = "Server Port",
+    Position = {240, 25}, 
+    Size = {60, 16},
+    FontSize = 12,
+    Style = "Text",
+    HTextAlign = "Left"
+  }
+  layout["UserID"] = {
+    PrettyName = "Enter User Name",
+    Position = {75, 45}, 
+    Size = {80, 16},
+    FontSize = 12,
+    Style = "Text",
+    HTextAlign = "Left"
+  }
+  layout["UserPassword"] = {
+    PrettyName = "Enter Password",
+    Position = {240, 45}, 
+    Size = {80, 16},
+    FontSize = 12,
+    Style = "Text",
+    HTextAlign = "Left"
+  }
+  layout["EndpointID"] = {
+    PrettyName = "Enter Endpoint ID or Mac",
+    Position = {90, 65}, 
+    Size = {90, 16},
+    FontSize = 12,
+    Style = "Text",
+    HTextAlign = "Left"
+  }
+  layout["CommandName"] = {
+    PrettyName = "Enter the Name of the Command",
+    Position = {250, 65}, 
+    Size = {90, 16},
+    FontSize = 12,
+    Style = "Text",
+    HTextAlign = "Left"
+  }
+  layout["KeyName1"] = {
+    PrettyName = "Command Key Name",
+    Position = {75, 85}, 
+    Size = {80, 16},
+    FontSize = 12,
+    Style = "Text",
+    HTextAlign = "Left"
+  }
+  layout["KeyValue1"] = {
+    PrettyName = "Key Value",
+    Position = {240, 85}, 
+    Size = {80, 16},
+    FontSize = 12,
+    Style = "Text",
+    HTextAlign = "Left"
+  }
+  layout["KeyName2"] = {
+    PrettyName = "Command Key Name2",
+    Position = {75, 105}, 
+    Size = {80, 16},
+    FontSize = 12,
+    Style = "Text",
+    HTextAlign = "Left"
+  }
+  layout["KeyValue2"] = {
+    PrettyName = "Key Value2",
+    Position = {240, 105}, 
+    Size = {80, 16},
+    FontSize = 12,
+    Style = "Text",
+    HTextAlign = "Left"
+  }
+  layout["KeyName3"] = {
+    PrettyName = "Command Key Name3",
+    Position = {75, 125}, 
+    Size = {80, 16},
+    FontSize = 12,
+    Style = "Text",
+    HTextAlign = "Left"
+  }
+  layout["KeyValue3"] = {
+    PrettyName = "Key Value3",
+    Position = {240, 125}, 
+    Size = {80, 16},
+    FontSize = 12,
+    Style = "Text",
+    HTextAlign = "Left"
+  }
+  layout["KeyName4"] = {
+    PrettyName = "Command Key Name4",
+    Position = {75, 145}, 
+    Size = {80, 16},
+    FontSize = 12,
+    Style = "Text",
+    HTextAlign = "Left"
+  }
+  layout["KeyValue4"] = {
+    PrettyName = "Key Value4",
+    Position = {240, 145}, 
+    Size = {80, 16},
+    FontSize = 12,
+    Style = "Text",
+    HTextAlign = "Left"
+  }
+  layout["SendGet"] = {
+    PrettyName = "Send GET Request",
+    Legend = "Send",
+    FontSize = 12,
+    Style = "Button",
+    Position = {105, 165},
+    Size = {40, 16}
+  }
+  layout["SendPost"] = {
+    PrettyName = "Send POST Request",
+    Legend = "Send",
+    FontSize = 12,
+    Style = "Button",
+    Position = {105, 185},
+    Size = {40, 16}
+  }
+  layout["SendPut"] = {
+    PrettyName = "Send PUT Request",
+    Legend = "Send",
+    FontSize = 12,
+    Style = "Button",
+    Position = {105, 205},
+    Size = {40, 16}
+  }
+  layout["Status"] = {
+    PrettyName = "Connection Status", 
+    Position = {105, 225}, 
+    Size = {200, 16}
+  }
+  layout["ResponseText"] = {
+    PrettyName = "Data",
+    Position = {105, 245}, 
+    Size = {200, 64},
+    HTextAlign = "Left"
+  }
+  return layout, graphics
+end
+
+--Start event based logic
+if Controls then
+  -- Aliases
+  Status = Controls.Status
+  SendGet = Controls.SendGet
+  SendPost = Controls.SendPost
+  SendPut = Controls.SendPut
+  ResponseText = Controls.ResponseText
+  
+  
+  
+  -- Constants
+  StatusState = { OK = 0, COMPROMISED = 1, FAULT = 2, NOTPRESENT = 3, MISSING = 4, INITIALIZING = 5}  -- Status states in designer
+  
+  -- Variables
+  
+  
+  --Debug level
+  DebugTx,DebugRx,DebugFunction = false, false, false
+  DebugPrint = Properties["Debug Print"].Value
+  if DebugPrint=="Tx/Rx" then
+    DebugTx,DebugRx=true,true
+  elseif DebugPrint=="Tx" then
+    DebugTx=true
+  elseif DebugPrint=="Rx" then
+    DebugRx=true
+  elseif DebugPrint=="Function Calls" then
+    DebugFunction=true
+  elseif DebugPrint=="All" then
+    DebugTx,DebugRx,DebugFunction=true,true,true
+  end
+  
+  -- Functions
+  -- Function that sets plugin status
+  function ReportStatus(state, msg)
+    if DebugFunction then print("ReportStatus() called:" .. state) end
+    local msg = msg or ""
+    Status.Value = StatusState[state]  -- Sets status state
+    Status.String = msg  -- Sets status message
+  end
+  
+  -- Function reads response code, sets status and prints received data.
+  function ResponseHandler(tbl, code, data, err, headers)
+    if DebugFunction then print("HTTP Response Handler called") end
+    if DebugRx then print("HTTP Response Code: " .. code) end
+    if code == 200 then  -- Vaild response
+      ReportStatus("OK")
+      if DebugRx then print("Rx: ", data) end
+      ResponseText.String = data
+  
+    elseif code == 401.0 or IPAddress.String == "" then  -- Invalid Address handler
+      ReportStatus("MISSING", "Check TCP connection properties") 
+  
+    else   -- Other error cases
+      ReportStatus("FAULT", err) 
+    end
+  end
+  
+  -- Send an HTTP GET request to the defined
+  function GetRequest()
+    IP_Address = Controls.IPAdd.String
+  PortNumber = tonumber(Controls.DevicePort.String)
+  User = Controls.UserID.String
+  Pword = Controls.UserPassword.String
+  PostDataContent ="{'':'','':}"
+  
+  if Controls.DevicePort.String=="80" then
+    Url_head = "http"
+  else
+     Url_head = "https"
+  end
+  -- Variable Formatting
+  base64Credentials = Qlib.base64_enc(User..":"..Pword)
+  
+  RequestTimeout = 10            -- Timeout of the connection in seconds
+  Host = Url_head.. "://".. IP_Address   -- HTTP server host name or IP address to use for connection
+  IPAddress = IP_Address      -- IP address can be for host
+  Port = PortNumber                     -- Port to use (if not 80 or 443)
+  
+    
+    if DebugFunction then print("GetRequest() called") end
+    -- Define any HTTP headers to sent
+    headers = {
+      ["Host"] = IPAddress,
+      ["Content-Type"] = "application/json",
+      ["Accept"] = "application/json",
+      ["Authorization"] = "Basic " ..base64Credentials
+    }
+    Command = Controls.CommandName.String
+  
+    -- Generate the URL of the request using HTTPClient formatter
+    url = HttpClient.CreateUrl({
+      ["Host"] = Host,
+      ["Path"] = "api/public/control/"..Command
+    })
+    
+    if DebugTx then print("Sending GET request: " .. url) end
+    HttpClient.Download({ 
+      Url          = url,
+      Method       = "GET",
+      Headers      = headers,
+      Timeout      = RequestTimeout,
+      EventHandler = ResponseHandler
+    })
+  end
+  
+  -- Send a POST request to the HTTP server
+  function PostRequest()
+    IP_Address = Controls.IPAdd.String
+    PortNumber = tonumber(Controls.DevicePort.String)
+    User = Controls.UserID.String
+    Pword = Controls.UserPassword.String
+    PostDataContent ="{'':'','':}"
+    
+    if Controls.DevicePort.String=="80" then
+      Url_head = "http"
+    else
+       Url_head = "https"
+    end
+    -- Variable Formatting
+    base64Credentials = Qlib.base64_enc(User..":"..Pword)
+    
+    RequestTimeout = 10            -- Timeout of the connection in seconds
+    Host = Url_head.. "://".. IP_Address   -- HTTP server host name or IP address to use for connection
+    IPAddress = IP_Address      -- IP address can be for host
+    Port = PortNumber                     -- Port to use (if not 80 or 443)
+    Command = Controls.CommandName.String
+  Endpoint_ID = Controls.EndpointID.String
+  key1 = Controls.KeyName1.String
+  value1 = Controls.KeyValue1.String
+  key2 = Controls.KeyName2.String
+  value2 = Controls.KeyValue2.String
+  key3 = Controls.KeyName3.String
+  value3 = Controls.KeyValue3.String
+  key4 = Controls.KeyName4.String
+  value4 = Controls.KeyValue4.String
+  if #key4 > 0 then
+      PostData = '{"' ..key1.. '":"' ..value1.. '","' ..key2.. '":"' ..value2.. '","' ..key3.. '":"' ..value3.. '","' ..key4.. '":"' ..value4.. '"}'
+      contentLength = #key1 + #value1 + #key2 + #value2 + #key3 + #value3 + #key4 + #value4 + 25
+    elseif #key3 > 0 then
+      PostData = '{"' ..key1.. '":"' ..value1.. '","' ..key2.. '":"' ..value2.. '","' ..key3.. '":"' ..value3.. '"}'
+      contentLength = #key1 + #value1 + #key2 + #value2 + #key3 + #value3 + 19
+    elseif #key2 > 0 then
+      PostData = '{"' ..key1.. '":"' ..value1.. '","' ..key2.. '":"' ..value2.. '"}'
+      contentLength = #key1 + #value1 + #key2 + #value2 + 13
+    elseif  #key1 > 0 then
+      PostData = '{"' ..key1.. '":"' ..value1.. '"}'
+      contentLength = #key1 + #value1 + 7
+    else PostData = ""
+        contentLength = 0
+    end
+    Path = "api/public/control/devices/".. Endpoint_ID .."/commands/".. Command                   -- Path within the site to access
+    
+    
+    if DebugFunction then print("PostRequest() called") end
+    -- Define any HTTP headers to sent
+    headers = {  
+      ["Host"] = IPAddress,
+      ["Content-Type"] = "application/json",
+      ["Accept"] = "application/json",
+      ["Authorization"] = "Basic " ..base64Credentials,
+      ["Content-Length"] = contentLength
+    }
+    -- Generate the URL of the request using HTTPClient formatter
+    url = HttpClient.CreateUrl({
+      ["Host"] = Host,
+      ["Path"] = Path
+    })
+    
+    if DebugTx then print("Sending POST request to: " .. url, PostData) end
+    HttpClient.Upload({ 
+      Url          = url,
+      Headers      = headers,
+      Data         = PostData,
+      Method       = "POST",
+      Timeout      = RequestTimeout,
+      EventHandler = ResponseHandler
+    })
+    if DebugTx then print("Sent POST request to: " .. url, PostData.. "with Headers" ..IP_Address, base64Credentials, contentLength) end
+  end
+  
+  
+    -- Generate a simple put request to an IP Address
+  function PutRequest()
+    if DebugFunction then print("PutRequest() called") end
+    -- Use the HTTPClient Encoder to format the PostData into an HTTP sendable string (Netscape encoding)
+    data = HttpClient.EncodeString(PostData)
+  
+    if DebugTx then print("Sending PUT request to: " .. string.format("http://%s/%s", IPAddress, Path), data) end
+    HttpClient.Upload({ 
+      Url          = string.format("http://%s/%s", IPAddress, Path), -- This format is an example and is not standard for all devices
+      Data         = data,
+      Method       = "PUT",
+      Timeout      = RequestTimeout,
+      EventHandler = ResponseHandler
+    })
+  end 
+  
+    -- Control Event Handler Binding
+    SendGet.EventHandler = GetRequest  
+    SendPost.EventHandler = PostRequest 
+    SendPut.EventHandler = PutRequest
+end
